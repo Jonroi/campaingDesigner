@@ -1,0 +1,122 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+// Core User model
+model User {
+    id        String    @id @default(cuid())
+    email     String    @unique
+    name      String
+    createdAt DateTime  @default(now()) @map("created_at")
+    updatedAt DateTime  @updatedAt @map("updated_at")
+    companies Company[]
+    
+    // NextAuth fields
+    emailVerified DateTime?
+    image         String?
+    accounts      Account[]
+    sessions      Session[]
+}
+
+// Company model for ICP generation
+model Company {
+    id          Int           @id @default(autoincrement())
+    userId      String        @map("user_id")
+    name        String
+    createdAt   DateTime      @default(now()) @map("created_at")
+    updatedAt   DateTime      @updatedAt @map("updated_at")
+    user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+    companyData CompanyData[]
+    icpProfiles ICPProfile[]
+}
+
+// Company data fields for ICP analysis
+model CompanyData {
+    id         String   @id @default(cuid())
+    companyId  Int      @map("company_id")
+    fieldName  String   @map("field_name")
+    fieldValue String   @map("field_value")
+    createdAt  DateTime @default(now()) @map("created_at")
+    updatedAt  DateTime @updatedAt @map("updated_at")
+    version    Int      @default(1)
+    company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+    @@unique([companyId, fieldName])
+}
+
+// ICP Profile model
+model ICPProfile {
+    id              String     @id @default(cuid())
+    companyId       Int        @map("company_id")
+    name            String
+    description     String?
+    profileData     Json       @map("profile_data")
+    confidenceLevel String     @default("medium") @map("confidence_level")
+    createdAt       DateTime   @default(now()) @map("created_at")
+    updatedAt       DateTime   @updatedAt @map("updated_at")
+    campaigns       Campaign[]
+    company         Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+}
+
+// Campaign model for marketing campaigns
+model Campaign {
+    id              String @id @default(cuid())
+    name            String
+    icpId           String @map("icp_id")
+    copyStyle       String @map("copy_style")
+    mediaType       String @map("media_type")
+    adCopy          String @map("ad_copy")
+    imagePrompt     String? @map("image_prompt")
+    imageUrl        String? @map("image_url")
+    cta             String
+    hooks           String
+    landingPageCopy String @map("landing_page_copy")
+    createdAt       DateTime @default(now()) @map("created_at")
+    updatedAt       DateTime @updatedAt @map("updated_at")
+
+    icpProfile ICPProfile @relation(fields: [icpId], references: [id], onDelete: Cascade)
+}
+
+// NextAuth models
+model Account {
+    id                       String  @id @default(cuid())
+    userId                   String
+    type                     String
+    provider                 String
+    providerAccountId        String
+    refresh_token            String?
+    access_token             String?
+    expires_at               Int?
+    token_type               String?
+    scope                    String?
+    id_token                 String?
+    session_state            String?
+    user                     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+    refresh_token_expires_in Int?
+
+    @@unique([provider, providerAccountId])
+}
+
+model Session {
+    id           String   @id @default(cuid())
+    sessionToken String   @unique
+    userId       String
+    expires      DateTime
+    user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+    identifier String
+    token      String   @unique
+    expires    DateTime
+
+    @@unique([identifier, token])
+}
