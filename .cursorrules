@@ -1,0 +1,29 @@
+# Cursor Rules for TypeScript Types and AI Service Structure
+
+## Type Definitions
+
+- Co-locate domain types for a feature in a dedicated `types.ts` file within that feature directory.
+- Export all types as named exports. Do not use default exports for types.
+- In implementation files, import types using `import type { ... } from './types'`.
+- If `verbatimModuleSyntax` is enabled, always use type-only imports for types.
+
+## File Organization (AI services)
+
+- Keep service classes (e.g., `AIService`) in their own file (e.g., `ollama.ts`).
+- Keep prompts and long template strings inside the service file unless shared across multiple services; if shared, move to `prompts.ts` with named exports.
+- Avoid exporting instances from `types.ts`.
+
+## Naming
+
+- Use descriptive, domain-specific names for interfaces and types (e.g., `ICPProfile`, `Campaign`).
+- Interfaces describing data structures should be nouns.
+
+## Imports/Exports
+
+- Prefer named exports for all modules.
+- Group imports: external packages first, then internal absolute paths, then relative paths.
+
+## Linting/Formatting
+
+- Fix linter warnings introduced by edits before committing.
+- Preserve existing indentation and formatting style in files.
