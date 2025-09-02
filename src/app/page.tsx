@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { Dashboard } from "~/app/_components/dashboard";
 import { auth } from "~/server/auth";
-import { HydrateClient } from "~/trpc/server";
+import { HydrateClient, api } from "~/trpc/server";
 
 export default async function Home() {
   const session = await auth();
@@ -74,7 +74,7 @@ export default async function Home() {
               <div className="mt-10 flex items-center justify-center gap-x-6">
                 <Link
                   href="/signin"
-                  className="rounded-lg bg-blue-600 px-6 py-3 text-base font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+                  className="rounded-lg bg-blue-600 px-6 py-3 text-base font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
                 >
                   Get started
                 </Link>
@@ -201,6 +201,8 @@ export default async function Home() {
 
   return (
     <HydrateClient>
+      {/* Prefetch initial data for SSR hydration */}
+      {await api.company.list.prefetch()}
       <Dashboard />
     </HydrateClient>
   );

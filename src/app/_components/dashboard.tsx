@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { api, type RouterOutputs } from "~/trpc/react";
+import { api } from "~/trpc/react";
 import { CompanyCard } from "./company-card";
 import { CreateCompanyModal } from "./create-company-modal";
 import { ICPProfileCard } from "./icp-profile-card";
@@ -11,9 +11,34 @@ import { Sidebar } from "./sidebar";
 import { CompanyProfile } from "./company-profile";
 
 export function Dashboard() {
-  type Company = RouterOutputs["company"]["list"][number];
-  type ICP = RouterOutputs["icp"]["list"][number];
-  type Campaign = RouterOutputs["campaign"]["list"][number];
+  type Company = {
+    id: number;
+    name: string;
+    createdAt: Date | string;
+    companyData: Array<{ id: string; fieldName: string; fieldValue: string }>;
+  };
+  type ICP = {
+    id: string;
+    name: string;
+    description?: string | null;
+    profileData: unknown;
+    confidenceLevel: string;
+    createdAt: Date | string;
+    campaigns: Array<{ id: string; name: string }>;
+  };
+  type Campaign = {
+    id: string;
+    name: string;
+    copyStyle: string;
+    mediaType: string;
+    adCopy: string;
+    imagePrompt?: string | null;
+    imageUrl?: string | null;
+    cta: string;
+    hooks: string;
+    landingPageCopy: string;
+    createdAt: Date | string;
+  };
   const [selectedCompany, setSelectedCompany] = useState<number | null>(null);
   const [selectedICP, setSelectedICP] = useState<string | null>(null);
   const [showCreateCompany, setShowCreateCompany] = useState(false);
@@ -22,34 +47,82 @@ export function Dashboard() {
   >("generator");
   const [sidebarTab, setSidebarTab] = useState("insights");
 
-  const { data: companies, refetch: refetchCompanies } =
-    api.company.list.useQuery();
-  const { data: icpProfiles, refetch: refetchICPs } = api.icp.list.useQuery(
+  const companiesQuery = api.company.list.useQuery();
+  const companies = (companiesQuery.data ?? []) as unknown as Company[];
+
+  const icpProfilesQuery = api.icp.list.useQuery(
     { companyId: selectedCompany! },
     { enabled: !!selectedCompany },
   );
-  const { data: campaigns, refetch: refetchCampaigns } =
-    api.campaign.list.useQuery(
-      { icpId: selectedICP! },
-      { enabled: !!selectedICP },
-    );
+  const icpProfiles = (icpProfilesQuery.data ?? []) as unknown as ICP[];
+
+  const campaignsQuery = api.campaign.list.useQuery(
+    { icpId: selectedICP! },
+    { enabled: !!selectedICP },
+  );
+  const campaigns = (campaignsQuery.data ?? []) as unknown as Campaign[];
+
+  const companiesForUI: Array<{
+    id: number;
+    name: string;
+    createdAt: Date;
+    companyData: Array<{ id: string; fieldName: string; fieldValue: string }>;
+  }> = companies.map((c) => ({
+    ...c,
+    createdAt:
+      c.createdAt instanceof Date ? c.createdAt : new Date(c.createdAt),
+  }));
+
+  type ICPProfileData = unknown;
+  const icpProfilesForUI: Array<{
+    id: string;
+    name: string;
+    description?: string | null;
+    profileData: ICPProfileData;
+    confidenceLevel: string;
+    createdAt: Date;
+    campaigns: Array<{ id: string; name: string }>;
+  }> = icpProfiles.map((i) => ({
+    ...i,
+    createdAt:
+      i.createdAt instanceof Date ? i.createdAt : new Date(i.createdAt),
+    profileData: i.profileData,
+  }));
+
+  const campaignsForUI: Array<{
+    id: string;
+    name: string;
+    copyStyle: string;
+    mediaType: string;
+    adCopy: string;
+    imagePrompt?: string | null;
+    imageUrl?: string | null;
+    cta: string;
+    hooks: string;
+    landingPageCopy: string;
+    createdAt: Date;
+  }> = campaigns.map((cmp) => ({
+    ...cmp,
+    createdAt:
+      cmp.createdAt instanceof Date ? cmp.createdAt : new Date(cmp.createdAt),
+  }));
 
   const createCompany = api.company.create.useMutation({
     onSuccess: async () => {
-      await refetchCompanies();
+      await companiesQuery.refetch();
       setShowCreateCompany(false);
     },
   });
 
   const generateICP = api.icp.generate.useMutation({
     onSuccess: async () => {
-      await refetchICPs();
+      await icpProfilesQuery.refetch();
     },
   });
 
   const generateCampaign = api.campaign.generate.useMutation({
     onSuccess: async () => {
-      await refetchCampaigns();
+      await campaignsQuery.refetch();
     },
   });
 
@@ -120,7 +193,7 @@ export function Dashboard() {
                         Companies
                       </p>
                       <p className="text-2xl font-semibold text-gray-100">
-                        {(companies as Company[])?.length ?? 0}
+                        {companies.length}
                       </p>
                     </div>
                   </div>
@@ -150,7 +223,7 @@ export function Dashboard() {
                         ICP Profiles
                       </p>
                       <p className="text-2xl font-semibold text-gray-100">
-                        {icpProfiles?.length ?? 0}
+                        {icpProfiles.length}
                       </p>
                     </div>
                   </div>
@@ -186,7 +259,7 @@ export function Dashboard() {
                         Campaigns
                       </p>
                       <p className="text-2xl font-semibold text-gray-100">
-                        {campaigns?.length ?? 0}
+                        {campaigns.length}
                       </p>
                     </div>
                   </div>
@@ -202,11 +275,11 @@ export function Dashboard() {
                       Companies
                     </h2>
                     <div className="text-sm text-gray-400">
-                      {companies?.length ?? 0} total
+                      {companies.length} total
                     </div>
                   </div>
                   <div className="space-y-3">
-                    {companies?.map((company: Company) => (
+                    {companiesForUI.map((company) => (
                       <CompanyCard
                         key={company.id}
                         company={company}
@@ -338,7 +411,7 @@ export function Dashboard() {
                             )}
                           </div>
                           <div className="space-y-3">
-                            {icpProfiles?.map((icp: ICP) => (
+                            {icpProfilesForUI.map((icp) => (
                               <ICPProfileCard
                                 key={icp.id}
                                 icp={icp}
@@ -426,7 +499,7 @@ export function Dashboard() {
                             )}
                           </div>
                           <div className="space-y-3">
-                            {campaigns?.map((campaign: Campaign) => (
+                            {campaignsForUI.map((campaign) => (
                               <CampaignCard
                                 key={campaign.id}
                                 campaign={campaign}
